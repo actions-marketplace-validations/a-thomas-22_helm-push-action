@@ -3,8 +3,8 @@
 set -e
 set -x
 
-if [ -z "$CHART_FOLDER" ]; then
-  echo "CHART_FOLDER is not set. Quitting."
+if [ -z "$PATHS" ]; then
+  echo "PATHS is not set. Quitting."
   exit 1
 fi
 
@@ -23,30 +23,28 @@ if [ -z "$CHARTMUSEUM_PASSWORD" ]; then
   exit 1
 fi
 
-if [ -z "$SOURCE_DIR" ]; then
-  SOURCE_DIR="."
-fi
-
 if [ -z "$FORCE" ]; then
   FORCE=""
 elif [ "$FORCE" == "1" ] || [ "$FORCE" == "True" ] || [ "$FORCE" == "TRUE" ]; then
   FORCE="-f"
 fi
 
+for CHART_PATH in $PATHS; do
+  cd $CHART_PATH
 
+  helm version -c
 
-cd ${SOURCE_DIR}/${CHART_FOLDER}
+  helm inspect chart .
 
-helm version -c
+  if [[ $CHARTMUSEUM_REPO_NAME ]]; then
+    helm repo add ${CHARTMUSEUM_REPO_NAME} ${CHARTMUSEUM_URL} --username=${CHARTMUSEUM_USER} --password=${CHARTMUSEUM_PASSWORD}
+  fi
 
-helm inspect chart .
+  helm dependency update .
 
-if [[ $CHARTMUSEUM_REPO_NAME ]]; then
-  helm repo add ${CHARTMUSEUM_REPO_NAME} ${CHARTMUSEUM_URL} --username=${CHARTMUSEUM_USER} --password=${CHARTMUSEUM_PASSWORD}
-fi
+  helm package .
 
-helm dependency update .
-
-helm package .
-
-helm cm-push ${CHART_FOLDER}-* ${CHARTMUSEUM_URL} -u ${CHARTMUSEUM_USER} -p ${CHARTMUSEUM_PASSWORD} ${FORCE}
+  CHART_FOLDER=$(basename "$CHART_PATH")
+  
+  helm cm-push ${CHART_FOLDER}-* ${CHARTMUSEUM_URL} -u ${CHARTMUSEUM_USER} -p ${CHARTMUSEUM_PASSWORD} ${FORCE}
+done

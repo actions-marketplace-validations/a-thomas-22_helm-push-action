@@ -29,6 +29,9 @@ elif [ "$FORCE" == "1" ] || [ "$FORCE" == "True" ] || [ "$FORCE" == "TRUE" ]; th
   FORCE="-f"
 fi
 
+# Store the original working directory
+orig_dir=$(pwd)
+
 for CHART_PATH in $PATHS; do
   cd $CHART_PATH
 
@@ -47,4 +50,7 @@ for CHART_PATH in $PATHS; do
   CHART_FOLDER=$(basename "$CHART_PATH")
   
   helm cm-push ${CHART_FOLDER}-* ${CHARTMUSEUM_URL} -u ${CHARTMUSEUM_USER} -p ${CHARTMUSEUM_PASSWORD} ${FORCE}
+
+  # Return to the original working directory at the end of each loop iteration
+  cd $orig_dir
 done
